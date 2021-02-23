@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
 import os
 import csv
 from pathlib import Path
+import re
 
 class AddressFileFormatError(Exception):
     pass
@@ -40,6 +42,10 @@ class Database:
         if( not ( os.access(f, os.R_OK) and os.access(f, os.W_OK) ) ):
             raise PermissionError()
 
+    @classmethod
+    def check_email(cls, email):
+        return bool(re.search(r'^[a-z0-9.]{1,40}@[a-z0-9]{1,10}\.[a-z]{2,3}$', email))
+
     def check_index_format(self, index):
 
         with open('todo.txt') as f:
@@ -49,3 +55,8 @@ class Database:
                     raise AddressFileFormatError("Index file has the wrong format")
             except:
                 raise AddressFileFormatError("Index file has the wrong format")
+
+            # iterate over rows and check that every address is valid
+            for row in reader:
+                if( Database.check_email( row["address"] ) ):
+                    raise InvalidAddressFormat("Found address in index file with invalid format: {}".format(row["address"]))
