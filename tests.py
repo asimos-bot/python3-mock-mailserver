@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import unittest
 import os
+
+from pathlib import Path
+
 from database import Database
+from database import EmailDoesNotExist
 
 class DatabaseTests(unittest.TestCase):
 
@@ -52,6 +56,27 @@ class DatabaseTests(unittest.TestCase):
                 "1234567890123456789012345678901234567890@1234567890.com"]:
             self.assertTrue( Database.check_email(email) )
 
+    def test_add_to_mailbox(self):
+
+        emails = ["a@a.uk", "asimos@gmail.com"]
+        directory = Path("test_database")
+        email_path = Path(directory, emails[0])
+
+        if( email_path.exists() ): os.remove(email_path)
+        if( directory.exists() ): os.rmdir(directory)
+
+        database = Database(directory, emails)
+        self.assertTrue(database.emails == emails)
+
+        self.assertRaises(
+            EmailDoesNotExist,
+            database.add_to_mailbox,
+            "a@a.ua",
+            "To: a@a.ua\nFrom: anonymous\nLet's play untrusted")
+
+        database.add_to_mailbox(emails[0], "test123")
+        with open(email_path) as f:
+            self.assertTrue( f.read() == "test123" )
 
 if __name__ == '__main__':
     unittest.main()
