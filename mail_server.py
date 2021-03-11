@@ -1,21 +1,26 @@
 import socket
 from enum import Enum
+from database import Database
 
 class StatusCode(Enum):
     CLOSING=221
     OK=250
     DOMAIN_NOT_AVAILABLE=421 # must close channel
     SYNTAX_ERROR=500
+    NOT_IMPLEMENTED=502
 
 class MailServer:
 
-    def __init__(self, port: int = 6500):
+    def __init__(self, directory, emails, port: int = 6500):
 
         self.skt = self.create_server(port)
 
         self.domain = None
+        self.sender = None
+        self.recipient = None
         self.client_skt = None
         self.client_addr = None
+        self.database = Database(directory, emails)
 
         self.serve_clients()
 
@@ -106,15 +111,11 @@ class MailServer:
 
             # wait for another client if any error occur
             try:
-                print("waiting for command:")
                 # 4 first bytes tell us the command given
                 command = self.get_client_bytes(4).upper() # NOTE: commands are case insensitive
 
-                print("command received:", command)
                 # read until the end of the line
                 line, status = self.get_line()
-                print("line received:", line)
-                print("status received:", status)
 
                 if( status == StatusCode.SYNTAX_ERROR ):
                     self.syntax_error()
@@ -137,31 +138,41 @@ class MailServer:
                 else:
                     self.syntax_error()
             except:
-                print("exception happened!")
                 (self.client_skt, self.client_addr) = self.skt.accept()
 
     def helo(self, line):
-        pass
+        # not implemented
+        self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
     def mail(self, line):
-        pass
+        # not implemented
+        self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
     def rcpt(self, line):
-        pass
+        # not implemented
+        self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
     def data(self):
-        pass
+        # not implemented
+        self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
     def rset(self):
-        # any info saved about the current user must be discarted.
+        # any info saved about the current email transaction must be discarted.
         # the connection is not finished tough, so don't throw client_skt and
         # client_addr out
-        pass
+        # also, we keep 'self.domain', since this is about the user, not the
+        # mail transaction itself
+        self.recipient = None
+        self.sender = None
+
+        self.send_client_bytes(StatusCode.OK.value)
+
     def noop(self):
 
         # return 250 if domain is available, 421 otherwise
-        status = StatusCode.OK if self.domain else StatusCode.DOMAIN_NOT_AVAILABLE
-        self.send_client_bytes(status.value)
+        self.send_client_bytes(StatusCode.OK.value)
 
     def quit(self):
         # remove current user information
-        self.rset()
+        self.recipient = None
+        self.sender = None
+        self.domain = None
 
         # send closing connection signal
         self.send_client_bytes(StatusCode.CLOSING.value)
