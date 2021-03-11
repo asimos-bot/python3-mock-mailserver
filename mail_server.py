@@ -8,6 +8,7 @@ class StatusCode(Enum):
     DOMAIN_NOT_AVAILABLE=421 # must close channel
     SYNTAX_ERROR=500
     NOT_IMPLEMENTED=502
+    CONNECTION_ESTABLISHED=220
 
 class MailServer:
 
@@ -91,11 +92,18 @@ class MailServer:
             # in this case we got and '\r' NOT followed by and '\n'
             return buf, StatusCode.SYNTAX_ERROR
 
+    def get_new_client(self):
+        (self.client_skt, self.client_addr) = self.skt.accept()
+        if( self.client_skt ):
+            # connection established
+            self.send_client_bytes(StatusCode.CONNECTION_ESTABLISHED.value)
+
     def serve_clients(self):
 
         # accept new client. Since we didn't specify otherwise,
         # the program will hang here until somebody connects
-        (self.client_skt, self.client_addr) = self.skt.accept()
+        self.domain = self.recipient = self.sender = None
+        self.get_new_client()
 
         # clients can disconnect, but the server never dies
         while(True):
@@ -135,22 +143,20 @@ class MailServer:
                     self.noop()
                 elif( command == "QUIT" ):
                     self.quit()
+                elif( command in ["SEND", "SOML", "SAML", "VRFY", "EXPN", "HELP", "TURN"] ):
+                    self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
                 else:
                     self.syntax_error()
             except:
-                (self.client_skt, self.client_addr) = self.skt.accept()
+                self.get_new_client()
 
     def helo(self, line):
-        # not implemented
         self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
     def mail(self, line):
-        # not implemented
         self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
     def rcpt(self, line):
-        # not implemented
         self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
     def data(self):
-        # not implemented
         self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
     def rset(self):
         # any info saved about the current email transaction must be discarted.
