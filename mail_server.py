@@ -71,6 +71,9 @@ class MailServer:
 
         return self.client_skt.sendall( buf.encode("ascii") )
 
+    def send_status_code(self, enum_item):
+        self.send_client_bytes( str(enum_item.value) + " " + enum_item.name.replace('_', ' ').lower() )
+
     def is_line_finished(self):
 
         first_byte = self.get_client_bytes(1)
@@ -106,7 +109,7 @@ class MailServer:
         (self.client_skt, self.client_addr) = self.skt.accept()
         if( self.client_skt ):
             # connection established
-            self.send_client_bytes(StatusCode.CONNECTION_ESTABLISHED.value)
+            self.send_status_code(StatusCode.CONNECTION_ESTABLISHED)
 
     def serve_clients(self):
 
@@ -136,7 +139,7 @@ class MailServer:
                 line, status = self.get_line()
 
                 if( status == StatusCode.SYNTAX_ERROR ):
-                    self.send_client_bytes(StatusCode.SYNTAX_ERROR.value)
+                    self.send_status_code(StatusCode.SYNTAX_ERROR)
 
                 # must be the first command in a session
                 if( command == "HELO" ):
@@ -154,14 +157,14 @@ class MailServer:
                 elif( command == "QUIT" ):
                     self.quit()
                 elif( command in ["SEND", "SOML", "SAML", "VRFY", "EXPN", "HELP", "TURN"] ):
-                    self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
+                    self.send_status_code(StatusCode.NOT_IMPLEMENTED)
                 else:
-                    self.send_client_bytes(StatusCode.SYNTAX_ERROR.value)
+                    self.send_status_code(StatusCode.SYNTAX_ERROR)
             except:
                 self.get_new_client()
 
     def helo(self, line):
-        self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
+        self.send_status_code(StatusCode.NOT_IMPLEMENTED)
     def mail(self, line):
 
         # get sender's email address:
@@ -172,11 +175,13 @@ class MailServer:
 
         # check if 'domain' is set
         if( not self.domain ):
-            return self.send_client_bytes(StatusCode.BAD_SEQUENCE.value)
+            self.send_status_code(StatusCode.BAD_SEQUENCE)
+            return
 
         # check 'FROM: '
         if( len(line) < len("FROM: ") or line[:6] != "FROM: "):
-            return self.send_client_bytes(StatusCode.SYNTAX_ERROR.value)
+            self.send_status_code(StatusCode.SYNTAX_ERROR)
+            return
 
         email = line[6:]
 
@@ -184,12 +189,12 @@ class MailServer:
         if( self.database.check_email(email) and split(email, '@')[1] == self.domain ):
             self.sender = email
         else:
-            self.send_client_bytes(StatusCode.INVALID_PARAMETER.value)
+            self.send_status_code(StatusCode.INVALID_PARAMETER)
 
     def rcpt(self, line):
-        self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
+        self.send_status_code(StatusCode.NOT_IMPLEMENTED)
     def data(self):
-        self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
+        self.send_status_code(StatusCode.NOT_IMPLEMENTED)
     def rset(self):
         # any info saved about the current email transaction must be discarted.
         # the connection is not finished tough, so don't throw client_skt and
@@ -200,12 +205,12 @@ class MailServer:
         self.sender = None
         self.domain = None
 
-        self.send_client_bytes(StatusCode.OK.value)
+        self.send_status_code(StatusCode.OK)
 
     def noop(self):
 
         # return 250 if domain is available, 421 otherwise
-        self.send_client_bytes(StatusCode.OK.value)
+        self.send_status_code(StatusCode.OK)
 
     def quit(self):
         # remove current user information
@@ -214,7 +219,7 @@ class MailServer:
         self.domain = None
 
         # send closing connection signal
-        self.send_client_bytes(StatusCode.CLOSING.value)
+        self.send_status_code(StatusCode.CLOSING)
 
         # close connection (no more receiving/sending) and close socket's file descriptor
         self.client_skt.close()
@@ -222,4 +227,4 @@ class MailServer:
         self.client_addr = None
 
     def syntax_error(self):
-        self.send_client_bytes(StatusCode.SYNTAX_ERROR.value)
+        self.send_status_code(StatusCode.SYNTAX_ERROR)
