@@ -9,6 +9,8 @@ class StatusCode(Enum):
     SYNTAX_ERROR=500
     NOT_IMPLEMENTED=502
     CONNECTION_ESTABLISHED=220
+    INVALID_PARAMETER=501
+    BAD_SEQUENCE=503
 
 class MailServer:
 
@@ -16,11 +18,19 @@ class MailServer:
 
         self.skt = self.create_server(port)
 
+        # domain of sender's email address (everything that comes after '@')
         self.domain = None
+
+        # sender's address
         self.sender = None
+
+        # recipient's address
         self.recipient = None
+
         self.client_skt = None
         self.client_addr = None
+
+        # call 'add_to_mailbox'
         self.database = Database(directory, emails)
 
         self.serve_clients()
@@ -126,7 +136,7 @@ class MailServer:
                 line, status = self.get_line()
 
                 if( status == StatusCode.SYNTAX_ERROR ):
-                    self.syntax_error()
+                    self.send_client_bytes(StatusCode.SYNTAX_ERROR.value)
 
                 # must be the first command in a session
                 if( command == "HELO" ):
@@ -146,14 +156,36 @@ class MailServer:
                 elif( command in ["SEND", "SOML", "SAML", "VRFY", "EXPN", "HELP", "TURN"] ):
                     self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
                 else:
-                    self.syntax_error()
+                    self.send_client_bytes(StatusCode.SYNTAX_ERROR.value)
             except:
                 self.get_new_client()
 
     def helo(self, line):
         self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
     def mail(self, line):
-        self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
+
+        # get sender's email address:
+        # MAIL FROM: <address>
+        # <address> = <1st part of the address>@<domain>
+
+        self.recipient = None
+
+        # check if 'domain' is set
+        if( not self.domain ):
+            return self.send_client_bytes(StatusCode.BAD_SEQUENCE.value)
+
+        # check 'FROM: '
+        if( len(line) < len("FROM: ") or line[:6] != "FROM: "):
+            return self.send_client_bytes(StatusCode.SYNTAX_ERROR.value)
+
+        email = line[6:]
+
+        # check if email is valid
+        if( self.database.check_email(email) and split(email, '@')[1] == self.domain ):
+            self.sender = email
+        else:
+            self.send_client_bytes(StatusCode.INVALID_PARAMETER.value)
+
     def rcpt(self, line):
         self.send_client_bytes(StatusCode.NOT_IMPLEMENTED.value)
     def data(self):
@@ -166,6 +198,7 @@ class MailServer:
         # mail transaction itself
         self.recipient = None
         self.sender = None
+        self.domain = None
 
         self.send_client_bytes(StatusCode.OK.value)
 
