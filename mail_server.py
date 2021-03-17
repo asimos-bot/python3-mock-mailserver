@@ -164,7 +164,13 @@ class MailServer:
                 self.get_new_client()
 
     def helo(self, line):
-        self.send_status_code(StatusCode.NOT_IMPLEMENTED)
+
+        # check 'HELO: '
+        if (len(line) < len("HELO: ")) or len(split(line, ' ') < 2)):
+            self.send_status_code(StatusCode.SYNTAX_ERROR)
+            return
+        return line[6:] # returns username
+
     def mail(self, line):
 
         # get sender's email address:
@@ -192,9 +198,23 @@ class MailServer:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
 
     def rcpt(self, line):
-        self.send_status_code(StatusCode.NOT_IMPLEMENTED)
+        
+        # get recipient's email address
+        if( len(line) < len("RCPT TO: ") or line[:9] != "RCPT TO: "):
+            self.send_status_code(StatusCode.SYNTAX_ERROR)
+            return
+        
+        email = line[9:]
+
+        # check if email is valid
+        if (self.database.check_email(email):
+            self.recipient = email
+        else: 
+            self.send_status_code(StatusCode.INVALID_PARAMETER)
+
     def data(self):
         self.send_status_code(StatusCode.NOT_IMPLEMENTED)
+    
     def rset(self):
         # any info saved about the current email transaction must be discarted.
         # the connection is not finished tough, so don't throw client_skt and
