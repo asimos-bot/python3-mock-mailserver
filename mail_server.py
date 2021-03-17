@@ -207,7 +207,7 @@ class MailServer:
         email = line[9:]
 
         # check if email is valid
-        if (self.database.check_email(email):
+        if (self.database.check_email(email)):
             self.recipient = email
         else: 
             self.send_status_code(StatusCode.INVALID_PARAMETER)
