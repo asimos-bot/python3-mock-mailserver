@@ -166,10 +166,11 @@ class MailServer:
     def helo(self, line):
 
         # check 'HELO: '
-        if (len(line) < len("HELO: ")) or len(split(line, ' ') < 2)):
+        if not line:
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
-        return line[6:] # returns username
+
+        self.domain = line # returns username
 
     def mail(self, line):
 
@@ -200,14 +201,14 @@ class MailServer:
     def rcpt(self, line):
 
         # get recipient's email address
-        if( len(line) < len("RCPT TO: ") or line[:9] != "RCPT TO: "):
+        if( len(line) < len("TO: ") or line[:3] != "TO: "):
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
 
-        email = line[9:]
+        email = line[3:]
 
         # check if email is valid
-        if (self.database.check_email(email)):
+        if ( self.database.check_email(email) ):
             self.recipient = email
         else:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
