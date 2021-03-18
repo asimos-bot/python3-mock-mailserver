@@ -94,16 +94,16 @@ class MailServer:
                 if( len(buf) < max_bytes):
                     buf += self.get_client_bytes(1)
                 else:
-                    return buf, StatusCode.SYNTAX_ERROR
+                    return buf.strip(), StatusCode.SYNTAX_ERROR
 
         # make sure to read last '\n' so we won't read it later
         if( buf[-1] == "\r" and self.get_client_bytes(1) == "\n"):
-            return buf[:-1], StatusCode.OK
+            return buf[:-1].strip(), StatusCode.OK
         elif( buf[-1] == "\n" ):
-            return buf[:-1], StatusCode.OK
+            return buf[:-1].strip(), StatusCode.OK
         else:
             # in this case we got and '\r' NOT followed by and '\n'
-            return buf, StatusCode.SYNTAX_ERROR
+            return buf.strip(), StatusCode.SYNTAX_ERROR
 
     def get_new_client(self):
         (self.client_skt, self.client_addr) = self.skt.accept()
@@ -166,10 +166,10 @@ class MailServer:
     def helo(self, line):
 
         # check 'HELO: '
-        if not line:
+        if not Database.check_domain(line):
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
-        print(line)
+
         self.domain = line
         self.send_status_code(StatusCode.OK)
 
@@ -178,7 +178,6 @@ class MailServer:
         # get sender's email address:
         # MAIL FROM: <address>
         # <address> = <1st part of the address>@<domain>
-
         self.recipient = None
 
         # check if 'domain' is set
@@ -192,23 +191,29 @@ class MailServer:
             return
 
         email = line[6:]
+        print( self.database.check_email(email) and email.split('@')[1] == self.domain )
 
         # check if email is valid
-        if( self.database.check_email(email) and split(email, '@')[1] == self.domain ):
+        if( self.database.check_email(email) and email.split('@')[1] == self.domain ):
             self.sender = email
+            self.send_status_code(StatusCode.OK)
         else:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
-
+            
     def rcpt(self, line):
 
+        print(line)
+
         # get recipient's email address
-        if( len(line) < len("TO: ") or line[:3] != "TO: "):
+        if( len(line) < len("TO: ") or line[:3] != "TO:"):
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
 
         email = line[3:]
         print(email)
 
+
+        print(self.databse.check_email(email))
         # check if email is valid
         if ( self.database.check_email(email) ):
             self.recipient = email
