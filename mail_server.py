@@ -169,8 +169,9 @@ class MailServer:
         if not line:
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
-
-        self.domain = line # returns username
+        print(line)
+        self.domain = line
+        self.send_status_code(StatusCode.OK)
 
     def mail(self, line):
 
@@ -206,10 +207,12 @@ class MailServer:
             return
 
         email = line[3:]
+        print(email)
 
         # check if email is valid
         if ( self.database.check_email(email) ):
             self.recipient = email
+            self.send_status_code(StatusCode.OK)
         else:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
 
