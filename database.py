@@ -45,6 +45,10 @@ class Database:
     def check_email(cls, email: str):
         return bool(re.search(r'^[a-z0-9.]{1,40}@[a-z0-9]{1,10}\.[a-z]{2,3}$', email))
 
+    @classmethod
+    def check_domain(cls, domain: str):
+        return bool(re.search(r'^[a-z0-9]{1,10}\.[a-z]{2,3}$', domain))
+
     def does_email_exist(self, email: str):
         return email in self.emails
 

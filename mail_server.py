@@ -198,23 +198,23 @@ class MailServer:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
 
     def rcpt(self, line):
-        
+
         # get recipient's email address
         if( len(line) < len("RCPT TO: ") or line[:9] != "RCPT TO: "):
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
-        
+
         email = line[9:]
 
         # check if email is valid
         if (self.database.check_email(email)):
             self.recipient = email
-        else: 
+        else:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
 
     def data(self):
         self.send_status_code(StatusCode.NOT_IMPLEMENTED)
-    
+
     def rset(self):
         # any info saved about the current email transaction must be discarted.
         # the connection is not finished tough, so don't throw client_skt and
