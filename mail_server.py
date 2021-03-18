@@ -248,3 +248,6 @@ class MailServer:
 
     def syntax_error(self):
         self.send_status_code(StatusCode.SYNTAX_ERROR)
+
+if( __name__ == "__main__" ):
+    MailServer("test_database", ["felipe@asimos.com"], 65000)
