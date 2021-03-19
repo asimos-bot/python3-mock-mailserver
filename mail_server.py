@@ -157,6 +157,9 @@ class MailServer:
                     self.send_status_code(StatusCode.NOT_IMPLEMENTED)
                 else:
                     self.send_status_code(StatusCode.SYNTAX_ERROR)
+
+                if( not self.client_skt ):
+                    self.get_new_client()
             except Exception as e:
                 raise e
                 self.get_new_client()
