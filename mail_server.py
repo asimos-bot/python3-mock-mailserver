@@ -215,7 +215,7 @@ class MailServer:
     def helo(self, line):
 
         # check 'HELO: '
-        if not Database.check_domain(line):
+        if( not Database.check_domain(line) ):
             self.send_status_code(StatusCode.INVALID_PARAMETER)
             return
 
