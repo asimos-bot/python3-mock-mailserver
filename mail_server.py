@@ -208,7 +208,7 @@ class MailServer:
     def rcpt(self, line):
 
         # get recipient's email address
-        if( len(line) < len("TO: ") or line[:3] != "TO:"):
+        if( line[:3] != "TO:" ):
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
 
