@@ -215,7 +215,7 @@ class MailServer:
         email = line[3:].strip()
 
         # check if email is valid
-        if ( self.database.check_email(email) ):
+        if ( self.database.check_email_regex(email) ):
             self.recipient = email
             self.send_status_code(StatusCode.OK)
         else:
