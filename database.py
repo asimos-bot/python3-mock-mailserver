@@ -63,7 +63,7 @@ class Database:
 
     @classmethod
     def check_domain(cls, domain: str):
-        return bool(re.search(r'^[a-zA-Z0-9-]+.[a-zA-Z0-9-.]+$', domain)) and '@' not in domain
+        return bool(re.search(r"^((?!-)[A-Za-z0-9-]{1,63}(?<!-)\.)+[A-Za-z]{2,6}", domain))
 
     def does_email_exist(self, email: str):
         return email in self.emails
