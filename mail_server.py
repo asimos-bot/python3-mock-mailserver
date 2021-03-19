@@ -1,6 +1,8 @@
 import socket
 from enum import Enum
 from database import Database
+import sys
+import os
 
 class StatusCode(Enum):
     CLOSING=221
@@ -13,6 +15,8 @@ class StatusCode(Enum):
     CONNECTION_ESTABLISHED=220
     INVALID_PARAMETER=501
     BAD_SEQUENCE=503
+    SERVICE_NOT_AVAILABLE=421
+    ADDRESS_UNKNOWN=550
 
 class MailServer:
 
@@ -160,6 +164,8 @@ class MailServer:
 
                 if( not self.client_skt ):
                     self.get_new_client()
+            except KeyboardInterrupt:
+                self.send_client_bytes(StatusCode.SERVICE_NOT_AVAILABLE)
             except Exception as e:
                 raise e
                 self.get_new_client()
@@ -189,7 +195,7 @@ class MailServer:
             return
 
         # check FROM:
-        if( line[:5] != "FROM:" or len(line) <= len("FROM:") ):
+        if( line[:5].upper() != "FROM:" or len(line) <= len("FROM:") ):
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
 
@@ -213,7 +219,7 @@ class MailServer:
             return
 
         # get recipient's email address
-        if( line[:3] != "TO:" or len(line) <= len("TO:")):
+        if( line[:3].upper() != "TO:" or len(line) <= len("TO:")):
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
 
@@ -223,9 +229,13 @@ class MailServer:
             email = email[1:-1]
 
         # check if email is valid
-        if ( self.database.check_email(email) ):
-            self.recipient = email
-            self.send_status_code(StatusCode.OK)
+        if ( self.database.does_email_exist(email) ):
+
+            if( Database.check_email_regex(email) ):
+                self.recipient = email
+                self.send_status_code(StatusCode.OK)
+            else:
+                self.send_status_code(StatusCode.RECIPIENT_NOT_AVAILABLE)
         else:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
 
@@ -264,7 +274,6 @@ class MailServer:
 
     def noop(self):
 
-        # return 250 if domain is available, 421 otherwise
         self.send_status_code(StatusCode.OK)
 
     def quit(self):
@@ -285,4 +294,17 @@ class MailServer:
         self.send_status_code(StatusCode.SYNTAX_ERROR)
 
 if( __name__ == "__main__" ):
-    MailServer("test_database", ["felipe@asimos.com"], 65000)
+
+    if( len(sys.argv) < 2 ):
+        print("help: ./mail_server.py <arquivo de emails>")
+    else:
+        with open(sys.argv[1]) as f:
+    
+            emails = [email.strip() for email in f.readlines()]
+
+            for idx, email in enumerate(emails, start=1):
+                if( not Database.check_email_regex(email) ):
+                    print("Email inválido no arquivo de input, linha {}: {}".format(idx, email))
+                    os.exit(1)
+
+            MailServer("test_database", emails, 65000)

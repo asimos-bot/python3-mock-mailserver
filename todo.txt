@@ -1,2 +1,0 @@
-1. Database based on files
-2. Encoding for binary and `CRLF.CRLF` in messages
