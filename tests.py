@@ -45,7 +45,7 @@ class DatabaseTests(unittest.TestCase):
                 "aacento@gmail .com",
                 "masaqui@psde. com",
                 "eacentoaqui@pode.cpm "]:
-            self.assertFalse( Database.check_email(email) )
+            self.assertFalse( Database.check_email_regex(email) )
 
         # good addresses
         for email in [
@@ -54,7 +54,7 @@ class DatabaseTests(unittest.TestCase):
                 "a@a.uk",
                 "23423@32432.com",
                 "1234567890123456789012345678901234567890@1234567890.com"]:
-            self.assertTrue( Database.check_email(email) )
+            self.assertTrue( Database.check_email_regex(email) )
 
     def test_add_to_mailbox(self):
 

@@ -26,7 +26,7 @@ class Database:
 
         self.check_permissions(directory)
         for email in emails:
-            if( not Database.check_email(email) ):
+            if( not Database.check_email_regex(email) ):
                 raise InvalidEmailAddressFormat("Email " + email + " is invalid")
 
     def check_permissions(self, directory: Path):
@@ -42,8 +42,11 @@ class Database:
                 raise PermissionError("We can't read or write on directory " + directory)
 
     @classmethod
-    def check_email(cls, email: str):
+    def check_email_regex(cls, email: str):
         return bool(re.search(r'^[a-z0-9.]{1,40}@[a-z0-9]{1,10}\.[a-z]{2,3}$', email))
+
+    def check_email(self, email: str):
+        return Database.check_email_regex(email) and email in self.emails
 
     @classmethod
     def check_domain(cls, domain: str):
