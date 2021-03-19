@@ -2,7 +2,6 @@ import socket
 from enum import Enum
 from database import Database
 import sys
-import os
 
 class StatusCode(Enum):
     CLOSING=221
@@ -17,6 +16,12 @@ class StatusCode(Enum):
     BAD_SEQUENCE=503
     SERVICE_NOT_AVAILABLE=421
     ADDRESS_UNKNOWN=550
+
+class UnexpectedDisconnection(Exception):
+    pass
+
+class SyntaxError(Exception):
+    pass
 
 class MailServer:
 
@@ -66,7 +71,23 @@ class MailServer:
         return skt
 
     def get_client_bytes(self, num_bytes):
-        return self.client_skt.recv(num_bytes).decode("ascii")
+
+        # if zero bytes are recovered, it means that the client disconnected
+        buf = self.client_skt.recv(num_bytes).decode("ascii")
+
+        if( len(buf) == 0 ):
+            raise UnexpectedDisconnection()
+    
+        return buf
+
+    def get_command(self):
+        
+        buf=""
+        for i in range(4):
+            buf += self.get_client_bytes(1).upper()
+            if( buf[-1] == "\n" or buf[-1] == "\r" ):
+                raise SyntaxError()
+        return buf
 
     def send_client_bytes(self, buf):
 
@@ -94,31 +115,40 @@ class MailServer:
     # return line (without newline) and status code
     def get_line(self, max_bytes=4096):
 
-        buf = self.get_client_bytes(1)
-        if( buf[-1] not in ['\r', '\n'] ):
-            while( buf[-1] not in ['\r', '\n'] ):
-                if( len(buf) < max_bytes):
-                    buf += self.get_client_bytes(1)
-                else:
-                    return buf, StatusCode.SYNTAX_ERROR
+            buf = self.get_client_bytes(1)
+            if( buf[-1] not in ['\r', '\n'] ):
+                while( buf[-1] not in ['\r', '\n'] ):
+                    if( len(buf) < max_bytes):
+                        buf += self.get_client_bytes(1)
+                    else:
+                        return buf, StatusCode.SYNTAX_ERROR
 
-        # make sure to read last '\n' so we won't read it later
-        if( buf[-1] == "\r" and self.get_client_bytes(1) == "\n"):
-            return buf[:-1], StatusCode.OK
-        elif( buf[-1] == "\n" ):
-            return buf[:-1], StatusCode.OK
-        else:
-            # in this case we got and '\r' NOT followed by and '\n'
-            return buf, StatusCode.SYNTAX_ERROR
+            # make sure to read last '\n' so we won't read it later
+            if( buf[-1] == "\r" and self.get_client_bytes(1) == "\n"):
+                return buf[:-1], StatusCode.OK
+            elif( buf[-1] == "\n" ):
+                return buf[:-1], StatusCode.OK
+            else:
+                # in this case we got and '\r' NOT followed by and '\n'
+                return buf, StatusCode.SYNTAX_ERROR
 
     def get_new_client(self):
         self.domain = self.recipient = self.sender = None
 
-        if( self.client_skt ): self.client_skt.close()
+        if( self.client_skt ):
+            self.client_skt.close()
+            self.log_disconnection()
+
         (self.client_skt, self.client_addr) = self.skt.accept()
         if( self.client_skt ):
             # connection established
             self.send_status_code(StatusCode.CONNECTION_ESTABLISHED)
+
+    def log(self, command, line):
+        print("'\x1b[32m" + self.client_addr[0] + ":" + str(self.client_addr[1]) + "\x1b[0m' -\n\tcommand: '" + command + "'\n\targs: '" + line + "'\n\tdomain: '" + str(self.domain) + "'\n\tsender: '" + str(self.sender) + "'\n\trecipient: '" + str(self.recipient))
+
+    def log_disconnection(self):
+        print('\x1b[31m' + self.client_addr[0] + ":" + str(self.client_addr[1]) + '\x1b[0m')
 
     def serve_clients(self):
 
@@ -133,7 +163,7 @@ class MailServer:
             # wait for another client if any error occur
             try:
                 # 4 first bytes tell us the command given
-                command = self.get_client_bytes(4).upper() # NOTE: commands are case insensitive
+                command = self.get_command() # NOTE: commands are case insensitive
 
                 # read until the end of the line
                 line, status = self.get_line()
@@ -162,10 +192,22 @@ class MailServer:
                 else:
                     self.send_status_code(StatusCode.SYNTAX_ERROR)
 
-                if( self.client_skt == None ):
-                    self.get_new_client()
+                self.log(command, line)
+
+                if( self.client_skt == None ): self.get_new_client()
+
+            except SyntaxError:
+                pass
+
             except KeyboardInterrupt:
                 self.send_client_bytes(StatusCode.SERVICE_NOT_AVAILABLE)
+                self.client_skt.close()
+                sys.exit()
+
+            except UnexpectedDisconnection:
+                self.log_disconnection
+                self.get_new_client()
+
             except Exception as e:
                 raise e
                 self.get_new_client()
@@ -245,7 +287,7 @@ class MailServer:
 
     def data(self):
     
-        if( not self.sender ):
+        if( not self.recipient ):
             self.send_status_code(StatusCode.BAD_SEQUENCE)
             return
 
@@ -311,6 +353,6 @@ if( __name__ == "__main__" ):
             for idx, email in enumerate(emails, start=1):
                 if( not Database.check_email_regex(email) ):
                     print("Email inválido no arquivo de input, linha {}: {}".format(idx, email))
-                    os.exit(1)
+                    sys.exit()
 
             MailServer("test_database", emails, 65000)

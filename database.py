@@ -71,7 +71,7 @@ class Database:
     def add_to_mailbox(self, email_address: str, data: str) -> bool:
 
         if( not self.does_email_exist(email_address) ):
-            raise EmailDoesNotExist("Email " + email_address + " is not on our database")
+            raise EmailDoesNotExist("Email " + str(email_address) + " is not on our database")
 
         filepath = Path( self.directory, email_address )
         with open(filepath, "a") as f:
