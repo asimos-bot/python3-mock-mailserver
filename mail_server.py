@@ -197,7 +197,7 @@ class MailServer:
             email = email[1:-1]
 
         # check if email is valid
-        if( self.database.check_email_regex(email) ):
+        if( self.database.check_email_regex(email) and email.split('@')[1] == self.domain):
             self.sender = email
             self.send_status_code(StatusCode.OK)
         else:
@@ -217,9 +217,10 @@ class MailServer:
 
         if( email[0] == "<" and email[-1] == ">"):
             email = email[1:-1]
-
+        print(email.spilt('@'))
+        print(self.domain)
         # check if email is valid
-        if ( self.database.check_email(email) and email.split('@')[1] == self.domain):
+        if ( self.database.check_email(email) ):
             self.recipient = email
             self.send_status_code(StatusCode.OK)
         else:
@@ -236,7 +237,6 @@ class MailServer:
 
         while(True):
             data_line = self.get_line()
-            print(data_line)
             data_text += data_line[0] + "\n"
             if(data_line == ".\n"):
                 self.database.add_to_mailbox(self.recipient,data_text)
