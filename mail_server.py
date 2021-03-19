@@ -197,7 +197,7 @@ class MailServer:
             email = email[1:-1]
 
         # check if email is valid
-        if( self.database.check_email_regex(email) and email.split('@')[1] == self.domain):
+        if( self.database.check_email(email) and email.split('@')[1] == self.domain):
             self.sender = email
             self.send_status_code(StatusCode.OK)
         else:
@@ -217,17 +217,16 @@ class MailServer:
 
         if( email[0] == "<" and email[-1] == ">"):
             email = email[1:-1]
-        print(email.spilt('@'))
-        print(self.domain)
+
         # check if email is valid
-        if ( self.database.check_email(email) ):
+        if ( self.database.check_email_regex(email) ):
             self.recipient = email
             self.send_status_code(StatusCode.OK)
         else:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
 
     def data(self):
-
+    
         if( not self.sender ):
             self.send_status_code(StatusCode.BAD_SEQUENCE)
             return
@@ -236,9 +235,9 @@ class MailServer:
         data_text = ""
 
         while(True):
-            data_line = self.get_line()
-            data_text += data_line[0] + "\n"
-            if(data_line == ".\n"):
+            data_line = self.get_line()[0]
+            data_text += data_line + "\n"
+            if(data_line == "."):
                 self.database.add_to_mailbox(self.recipient,data_text)
                 self.send_status_code(StatusCode.OK)
                 break
