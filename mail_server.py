@@ -226,7 +226,7 @@ class MailServer:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
 
     def data(self):
-
+    
         if( not self.sender ):
             self.send_status_code(StatusCode.BAD_SEQUENCE)
             return
@@ -235,10 +235,9 @@ class MailServer:
         data_text = ""
 
         while(True):
-            data_line = self.get_line()
-            print(data_line)
-            data_text += data_line[0] + "\n"
-            if(data_line == ".\n"):
+            data_line = self.get_line()[0]
+            data_text += data_line + "\n"
+            if(data_line == "."):
                 self.database.add_to_mailbox(self.recipient,data_text)
                 self.send_status_code(StatusCode.OK)
                 break
