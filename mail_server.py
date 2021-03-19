@@ -197,7 +197,7 @@ class MailServer:
                 if( self.client_skt == None ): self.get_new_client()
 
             except SyntaxError:
-                pass
+                self.send_status_code(StatusCode.SYNTAX_ERROR)
 
             except KeyboardInterrupt:
                 self.send_client_bytes(StatusCode.SERVICE_NOT_AVAILABLE)
