@@ -235,9 +235,9 @@ class MailServer:
                 self.recipient = email
                 self.send_status_code(StatusCode.OK)
             else:
-                self.send_status_code(StatusCode.RECIPIENT_NOT_AVAILABLE)
+                self.send_status_code(StatusCode.INVALID_PARAMETER)
         else:
-            self.send_status_code(StatusCode.INVALID_PARAMETER)
+            self.send_status_code(StatusCode.RECIPIENT_NOT_AVAILABLE)
 
     def data(self):
     
