@@ -34,7 +34,7 @@ class Database:
     def create_email_files(self, emails):
 
         # remove all possible garbage files
-        for root, dirs, files in os.walk(mypath):
+        for root, dirs, files in os.walk(directory):
             for file in files:
                 os.remove(os.path.join(root, file))
 
