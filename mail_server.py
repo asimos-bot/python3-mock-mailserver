@@ -132,7 +132,8 @@ class MailServer:
                 command = self.get_client_bytes(4).upper() # NOTE: commands are case insensitive
 
                 # read until the end of the line
-                line, status = self.get_line().strip()
+                line, status = self.get_line()
+                line = line.strip()
 
                 if( status == StatusCode.SYNTAX_ERROR ):
                     self.send_status_code(StatusCode.SYNTAX_ERROR)
@@ -217,7 +218,6 @@ class MailServer:
         if( email[0] == "<" and email[-1] == ">"):
             email = email[1:-1]
 
-        print("'" + email + "'")
         # check if email is valid
         if ( self.database.check_email(email) and email.split('@')[1] == self.domain):
             self.recipient = email

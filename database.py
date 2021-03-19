@@ -46,7 +46,9 @@ class Database:
         return bool(re.search(r'(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-.]+$)', email))
 
     def check_email(self, email: str):
-
+        print("'" + email + "'")
+        print(self.does_email_exist(email))
+        print(Database.check_email_regex(email))
         return Database.check_email_regex(email) and self.does_email_exist(email)
 
     @classmethod
