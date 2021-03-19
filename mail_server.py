@@ -112,6 +112,13 @@ class MailServer:
         else:
             return False
 
+    def consume_until_new_line(self):
+        c = 'a'
+        while(c[0] != ord('\n')):
+            c = self.client_skt.recv(1)
+            if( len(c) == 0 ):
+                raise UnexpectedDisconnection()
+
     # return line (without newline) and status code
     def get_line(self, max_bytes=4096):
 
@@ -199,8 +206,13 @@ class MailServer:
             except SyntaxError:
                 self.send_status_code(StatusCode.SYNTAX_ERROR)
 
+            except UnicodeDecodeError:
+                self.send_status_code(StatusCode.LOCAL_PROCESSING_ERROR)
+                # consume newline
+                self.consume_until_new_line()
+
             except KeyboardInterrupt:
-                self.send_client_bytes(StatusCode.SERVICE_NOT_AVAILABLE)
+                self.send_status_code(StatusCode.SERVICE_NOT_AVAILABLE)
                 self.client_skt.close()
                 sys.exit()
 
