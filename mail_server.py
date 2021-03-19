@@ -96,16 +96,16 @@ class MailServer:
                 if( len(buf) < max_bytes):
                     buf += self.get_client_bytes(1)
                 else:
-                    return buf.strip(), StatusCode.SYNTAX_ERROR
+                    return buf, StatusCode.SYNTAX_ERROR
 
         # make sure to read last '\n' so we won't read it later
         if( buf[-1] == "\r" and self.get_client_bytes(1) == "\n"):
-            return buf[:-1].strip(), StatusCode.OK
+            return buf[:-1], StatusCode.OK
         elif( buf[-1] == "\n" ):
-            return buf[:-1].strip(), StatusCode.OK
+            return buf[:-1], StatusCode.OK
         else:
             # in this case we got and '\r' NOT followed by and '\n'
-            return buf.strip(), StatusCode.SYNTAX_ERROR
+            return buf, StatusCode.SYNTAX_ERROR
 
     def get_new_client(self):
         self.domain = self.recipient = self.sender = None
@@ -126,21 +126,13 @@ class MailServer:
         while(True):
 
             # get their commands and respond to them...
-
-            # * pegar username com HELO
-            # * pegar recipiente/destinatario com RCPT/MAIL
-            # * enviar emails para database com DATA
-            # * responder OK para NOOP
-            # * abortar conexão imediatamente com RSET
-            # * fechar conexao com QUIT (mandar OK antes)
-
             # wait for another client if any error occur
             try:
                 # 4 first bytes tell us the command given
                 command = self.get_client_bytes(4).upper() # NOTE: commands are case insensitive
 
                 # read until the end of the line
-                line, status = self.get_line()
+                line, status = self.get_line().strip()
 
                 if( status == StatusCode.SYNTAX_ERROR ):
                     self.send_status_code(StatusCode.SYNTAX_ERROR)
@@ -164,7 +156,8 @@ class MailServer:
                     self.send_status_code(StatusCode.NOT_IMPLEMENTED)
                 else:
                     self.send_status_code(StatusCode.SYNTAX_ERROR)
-            except:
+            except Exception as e:
+                raise e
                 self.get_new_client()
 
     def helo(self, line):
@@ -176,25 +169,6 @@ class MailServer:
 
         self.domain = line
         self.send_status_code(StatusCode.OK)
-    
-    def data(self):
-        self.send_status_code(StatusCode.START_MAIL_INPUT)
-        data_text = ""
-        i = 0
-        while(true):
-            i += 1
-            print(i)
-            data_line = self.get_line()
-            print(data_line)
-            data_text += data_line + "\n"
-            if(data_line == ".\n"):
-                self.database.add_to_mailbox(self.recipient,data_text)
-                self.send_status_code(StatusCode.OK)
-                break
-            for character in data_line:
-                if(ord(character)>127):
-                    self.send_status_code(StatusCode.LOCAL_PROCESSING_ERROR)
-                    break
 
     def mail(self, line):
 
@@ -211,7 +185,7 @@ class MailServer:
             return
 
         # check FROM:
-        if( line[:5] != "FROM:" ):
+        if( line[:5] != "FROM:" or len(line) <= len("FROM:") ):
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
 
@@ -234,20 +208,44 @@ class MailServer:
             self.send_status_code(StatusCode.BAD_SEQUENCE)
 
         # get recipient's email address
-        if( line[:3] != "TO:" ):
+        if( line[:3] != "TO:" or len(line) <= len("TO:")):
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
 
         email = line[3:].strip()
 
+        if( email[0] == "<" and email[-1] == ">"):
+            email = email[1:-1]
+
+        print("'" + email + "'")
         # check if email is valid
-        if ( self.database.check_email_regex(email) ):
+        if ( self.database.check_email(email) and email.split('@')[1] == self.domain):
             self.recipient = email
             self.send_status_code(StatusCode.OK)
         else:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
 
+    def data(self):
 
+        if( not self.sender ):
+            self.send_status_code(StatusCode.BAD_SEQUENCE)
+            return
+
+        self.send_status_code(StatusCode.START_MAIL_INPUT)
+        data_text = ""
+
+        while(True):
+            data_line = self.get_line()
+            print(data_line)
+            data_text += data_line[0] + "\n"
+            if(data_line == ".\n"):
+                self.database.add_to_mailbox(self.recipient,data_text)
+                self.send_status_code(StatusCode.OK)
+                break
+            for character in data_line:
+                if(ord(character)>127):
+                    self.send_status_code(StatusCode.LOCAL_PROCESSING_ERROR)
+                    break
 
     def rset(self):
         # any info saved about the current email transaction must be discarted.
