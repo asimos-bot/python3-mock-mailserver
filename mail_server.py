@@ -197,7 +197,7 @@ class MailServer:
             email = email[1:-1]
 
         # check if email is valid
-        if( self.database.check_email(email) and email.split('@')[1] == self.domain):
+        if( self.database.check_email_regex(email) and email.split('@')[1] == self.domain):
             self.sender = email
             self.send_status_code(StatusCode.OK)
         else:
@@ -207,6 +207,7 @@ class MailServer:
 
         if( not self.sender ):
             self.send_status_code(StatusCode.BAD_SEQUENCE)
+            return
 
         # get recipient's email address
         if( line[:3] != "TO:" or len(line) <= len("TO:")):
@@ -219,7 +220,7 @@ class MailServer:
             email = email[1:-1]
 
         # check if email is valid
-        if ( self.database.check_email_regex(email) ):
+        if ( self.database.check_email(email) ):
             self.recipient = email
             self.send_status_code(StatusCode.OK)
         else:
