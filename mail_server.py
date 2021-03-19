@@ -11,6 +11,7 @@ class StatusCode(Enum):
     CONNECTION_ESTABLISHED=220
     INVALID_PARAMETER=501
     BAD_SEQUENCE=503
+    START_MAIL_INPUT=354
 
 class MailServer:
 
@@ -106,6 +107,12 @@ class MailServer:
             return buf.strip(), StatusCode.SYNTAX_ERROR
 
     def get_new_client(self):
+        # accept new client. Since we didn't specify otherwise,
+        # the program will hang here until somebody connects
+        self.domain = self.recipient = self.sender = None
+
+        if( self.client_skt ): self.client_skt.close()
+
         (self.client_skt, self.client_addr) = self.skt.accept()
         if( self.client_skt ):
             # connection established
@@ -113,9 +120,6 @@ class MailServer:
 
     def serve_clients(self):
 
-        # accept new client. Since we didn't specify otherwise,
-        # the program will hang here until somebody connects
-        self.domain = self.recipient = self.sender = None
         self.get_new_client()
 
         # clients can disconnect, but the server never dies
@@ -199,13 +203,16 @@ class MailServer:
             email = email[1:-1]
 
         # check if email is valid
-        if( self.database.check_email_regex(email) and email.split('@')[1] == self.domain ):
+        if( self.database.check_email_regex(email) ):
             self.sender = email
             self.send_status_code(StatusCode.OK)
         else:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
             
     def rcpt(self, line):
+
+        if( not self.sender ):
+            self.send_status_code(StatusCode.BAD_SEQUENCE)
 
         # get recipient's email address
         if( line[:3] != "TO:" ):
@@ -215,7 +222,7 @@ class MailServer:
         email = line[3:].strip()
 
         # check if email is valid
-        if ( self.database.check_email(email) ):
+        if ( self.database.check_email_regex(email) ):
             self.recipient = email
             self.send_status_code(StatusCode.OK)
         else:

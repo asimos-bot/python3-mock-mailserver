@@ -43,14 +43,14 @@ class Database:
 
     @classmethod
     def check_email_regex(cls, email: str):
-        return bool(re.search(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-.]+$)", email))
+        return bool(re.search(r'(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-.]+$)', email))
 
     def check_email(self, email: str):
         return Database.check_email_regex(email) and self.does_email_exist(email)
 
     @classmethod
     def check_domain(cls, domain: str):
-        return bool(re.search(r'^[a-z0-9]{1,10}\.[a-z]{2,3}$', domain))
+        return bool(re.search(r'^[a-zA-Z0-9-]+.[a-zA-Z0-9-.]+$', domain))
 
     def does_email_exist(self, email: str):
         return email in self.emails
