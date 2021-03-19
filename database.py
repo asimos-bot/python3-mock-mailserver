@@ -22,12 +22,21 @@ class Database:
         self.directory = directory
         self.emails = emails
 
+        self.create_email_files(emails)
+
     def check(self, directory: Path, emails: List[str]):
 
         self.check_permissions(directory)
         for email in emails:
             if( not Database.check_email_regex(email) ):
                 raise InvalidEmailAddressFormat("Email " + email + " is invalid")
+
+    def create_email_files(self, emails):
+
+        for email in emails:
+            filepath = Path( self.directory, email)
+            with open(filepath, "a") as f:
+                pass
 
     def check_permissions(self, directory: Path):
 

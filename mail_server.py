@@ -299,7 +299,7 @@ if( __name__ == "__main__" ):
         print("help: ./mail_server.py <arquivo de emails>")
     else:
         with open(sys.argv[1]) as f:
-    
+
             emails = [email.strip() for email in f.readlines()]
 
             for idx, email in enumerate(emails, start=1):
