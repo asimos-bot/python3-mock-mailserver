@@ -162,7 +162,7 @@ class MailServer:
                 else:
                     self.send_status_code(StatusCode.SYNTAX_ERROR)
 
-                if( not self.client_skt ):
+                if( self.client_skt == None ):
                     self.get_new_client()
             except KeyboardInterrupt:
                 self.send_client_bytes(StatusCode.SERVICE_NOT_AVAILABLE)
@@ -177,6 +177,10 @@ class MailServer:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
             return
 
+        # RFC says to do so
+        self.recipient = None
+        self.domain = None
+
         self.domain = line
         self.send_status_code(StatusCode.OK)
 
@@ -186,13 +190,13 @@ class MailServer:
         # MAIL FROM: <address>
         # <address> = <1st part of the address>@<domain>
 
-        # RFC says to do so
-        self.recipient = None
-
         # check if 'domain' is set
         if( not self.domain ):
             self.send_status_code(StatusCode.BAD_SEQUENCE)
             return
+
+        # RFC says to do so
+        self.recipient = None
 
         # check FROM:
         if( line[:5].upper() != "FROM:" or len(line) <= len("FROM:") ):
@@ -237,7 +241,7 @@ class MailServer:
             else:
                 self.send_status_code(StatusCode.INVALID_PARAMETER)
         else:
-            self.send_status_code(StatusCode.RECIPIENT_NOT_AVAILABLE)
+            self.send_status_code(StatusCode.ADDRESS_UNKNOWN)
 
     def data(self):
     
@@ -289,6 +293,8 @@ class MailServer:
         self.client_skt.close()
         self.client_skt = None
         self.client_addr = None
+
+        self.get_new_client()
 
     def syntax_error(self):
         self.send_status_code(StatusCode.SYNTAX_ERROR)

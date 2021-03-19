@@ -33,9 +33,14 @@ class Database:
 
     def create_email_files(self, emails):
 
+        # remove all possible garbage files
+        for root, dirs, files in os.walk(mypath):
+            for file in files:
+                os.remove(os.path.join(root, file))
+
         for email in emails:
             filepath = Path( self.directory, email)
-            with open(filepath, "a") as f:
+            with open(filepath, "w") as f:
                 pass
 
     def check_permissions(self, directory: Path):
@@ -59,7 +64,7 @@ class Database:
 
     @classmethod
     def check_domain(cls, domain: str):
-        return bool(re.search(r'^[a-zA-Z0-9-]+.[a-zA-Z0-9-.]+$', domain))
+        return bool(re.search(r'^[-a-zA-Z0-9@:%.+~#=]{1,256}.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%+.~#?&//=]*)$', domain))
 
     def does_email_exist(self, email: str):
         return email in self.emails
