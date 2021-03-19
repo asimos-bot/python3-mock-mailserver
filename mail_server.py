@@ -167,7 +167,7 @@ class MailServer:
 
         # check 'HELO: '
         if not Database.check_domain(line):
-            self.send_status_code(StatusCode.SYNTAX_ERROR)
+            self.send_status_code(StatusCode.INVALID_PARAMETER)
             return
 
         self.domain = line
@@ -178,6 +178,8 @@ class MailServer:
         # get sender's email address:
         # MAIL FROM: <address>
         # <address> = <1st part of the address>@<domain>
+
+        # RFC says to do so
         self.recipient = None
 
         # check if 'domain' is set
@@ -185,13 +187,18 @@ class MailServer:
             self.send_status_code(StatusCode.BAD_SEQUENCE)
             return
 
-        # check 'FROM: '
-        if( len(line) < len("FROM: ") or line[:6] != "FROM: "):
+        # check FROM:
+        if( line[:5] != "FROM:" ):
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
 
-        email = line[6:]
-        print( self.database.check_email(email) and email.split('@')[1] == self.domain )
+        email = line[6:].strip()
+
+        # check for < and >
+        if( email[0] == "<" and email[-1] == ">" ):
+            email = email[1:-1]
+
+        print(self.database.check_email(email))
 
         # check if email is valid
         if( self.database.check_email(email) and email.split('@')[1] == self.domain ):
@@ -202,18 +209,14 @@ class MailServer:
             
     def rcpt(self, line):
 
-        print(line)
-
         # get recipient's email address
         if( len(line) < len("TO: ") or line[:3] != "TO:"):
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
 
-        email = line[3:]
+        email = line[3:].strip()
         print(email)
-
-
-        print(self.databse.check_email(email))
+        print(self.database.check_email(email))
         # check if email is valid
         if ( self.database.check_email(email) ):
             self.recipient = email
