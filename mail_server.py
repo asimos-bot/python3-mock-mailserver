@@ -5,17 +5,18 @@ from database import Database
 class StatusCode(Enum):
     CLOSING=221
     OK=250
+    START_MAIL_INPUT=354
     DOMAIN_NOT_AVAILABLE=421 # must close channel
+    LOCAL_PROCESSING_ERROR=451
     SYNTAX_ERROR=500
     NOT_IMPLEMENTED=502
     CONNECTION_ESTABLISHED=220
     INVALID_PARAMETER=501
     BAD_SEQUENCE=503
-    START_MAIL_INPUT=354
 
 class MailServer:
 
-    def __init__(self, directory, emails, port: int = 6500):
+    def __init__(self, directory, emails, port: int = 65000):
 
         self.skt = self.create_server(port)
 
@@ -107,12 +108,6 @@ class MailServer:
             return buf.strip(), StatusCode.SYNTAX_ERROR
 
     def get_new_client(self):
-        # accept new client. Since we didn't specify otherwise,
-        # the program will hang here until somebody connects
-        self.domain = self.recipient = self.sender = None
-
-        if( self.client_skt ): self.client_skt.close()
-
         (self.client_skt, self.client_addr) = self.skt.accept()
         if( self.client_skt ):
             # connection established
@@ -120,6 +115,9 @@ class MailServer:
 
     def serve_clients(self):
 
+        # accept new client. Since we didn't specify otherwise,
+        # the program will hang here until somebody connects
+        self.domain = self.recipient = self.sender = None
         self.get_new_client()
 
         # clients can disconnect, but the server never dies
@@ -176,6 +174,25 @@ class MailServer:
 
         self.domain = line
         self.send_status_code(StatusCode.OK)
+    
+    def data(self):
+        self.send_status_code(StatusCode.START_MAIL_INPUT)
+        data_text = ""
+        i = 0
+        while(true):
+            i += 1
+            print(i)
+            data_line = self.get_line()
+            print(data_line)
+            data_text += data_line + "\n"
+            if(data_line == ".\n"):
+                self.database.add_to_mailbox(self.recipient,data_text)
+                self.send_status_code(StatusCode.OK)
+                break
+            for character in data_line:
+                if(ord(character)>127):
+                    self.send_status_code(StatusCode.LOCAL_PROCESSING_ERROR)
+                    break
 
     def mail(self, line):
 
@@ -203,7 +220,7 @@ class MailServer:
             email = email[1:-1]
 
         # check if email is valid
-        if( self.database.check_email_regex(email) ):
+        if( self.database.check_email_regex(email) and email.split('@')[1] == self.domain ):
             self.sender = email
             self.send_status_code(StatusCode.OK)
         else:
@@ -211,11 +228,8 @@ class MailServer:
             
     def rcpt(self, line):
 
-        if( not self.sender ):
-            self.send_status_code(StatusCode.BAD_SEQUENCE)
-
         # get recipient's email address
-        if( line[:3] != "TO:" ):
+        if( len(line) < len("TO: ") or line[:3] != "TO:"):
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
 
@@ -228,8 +242,7 @@ class MailServer:
         else:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
 
-    def data(self):
-        self.send_status_code(StatusCode.NOT_IMPLEMENTED)
+
 
     def rset(self):
         # any info saved about the current email transaction must be discarted.
