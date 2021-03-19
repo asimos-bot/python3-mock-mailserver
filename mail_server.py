@@ -237,7 +237,7 @@ class MailServer:
             else:
                 self.send_status_code(StatusCode.INVALID_PARAMETER)
         else:
-            self.send_status_code(StatusCode.RECIPIENT_NOT_AVAILABLE)
+            self.send_status_code(StatusCode.ADDRESS_UNKNOWN)
 
     def data(self):
     
