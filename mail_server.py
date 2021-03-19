@@ -108,6 +108,9 @@ class MailServer:
             return buf.strip(), StatusCode.SYNTAX_ERROR
 
     def get_new_client(self):
+        self.domain = self.recipient = self.sender = None
+
+        if( self.client_skt ): self.client_skt.close()
         (self.client_skt, self.client_addr) = self.skt.accept()
         if( self.client_skt ):
             # connection established
@@ -117,7 +120,6 @@ class MailServer:
 
         # accept new client. Since we didn't specify otherwise,
         # the program will hang here until somebody connects
-        self.domain = self.recipient = self.sender = None
         self.get_new_client()
 
         # clients can disconnect, but the server never dies
@@ -220,7 +222,7 @@ class MailServer:
             email = email[1:-1]
 
         # check if email is valid
-        if( self.database.check_email_regex(email) and email.split('@')[1] == self.domain ):
+        if( self.database.check_email_regex(email) ):
             self.sender = email
             self.send_status_code(StatusCode.OK)
         else:
@@ -228,8 +230,11 @@ class MailServer:
             
     def rcpt(self, line):
 
+        if( not self.sender ):
+            self.send_status_code(StatusCode.BAD_SEQUENCE)
+
         # get recipient's email address
-        if( len(line) < len("TO: ") or line[:3] != "TO:"):
+        if( line[:3] != "TO:" ):
             self.send_status_code(StatusCode.SYNTAX_ERROR)
             return
 
