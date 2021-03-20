@@ -81,7 +81,6 @@ class MailServer:
         return buf
 
     def get_command(self):
-        
         buf=""
         for i in range(4):
             buf += self.get_client_bytes(1).upper()
@@ -151,6 +150,11 @@ class MailServer:
             # connection established
             self.send_status_code(StatusCode.CONNECTION_ESTABLISHED)
 
+    def check_space(self, line):
+        if( not (line[0] == ' ' or line[0] == '\t') ):
+            raise SyntaxError()
+        return line.strip()
+
     def log(self, command, line):
         print("'\x1b[32m" + self.client_addr[0] + ":" + str(self.client_addr[1]) + "\x1b[0m' -\n\tcommand: '" + command + "'\n\targs: '" + line + "'\n\tdomain: '" + str(self.domain) + "'\n\tsender: '" + str(self.sender) + "'\n\trecipient: '" + str(self.recipient))
 
@@ -174,7 +178,6 @@ class MailServer:
 
                 # read until the end of the line
                 line, status = self.get_line()
-                line = line.strip()
 
                 if( status == StatusCode.SYNTAX_ERROR ):
                     self.send_status_code(StatusCode.SYNTAX_ERROR)
@@ -226,6 +229,8 @@ class MailServer:
 
     def helo(self, line):
 
+        line = self.check_space(line)
+
         # check 'HELO: '
         if( not Database.check_domain(line) ):
             self.send_status_code(StatusCode.INVALID_PARAMETER)
@@ -239,6 +244,8 @@ class MailServer:
         self.send_status_code(StatusCode.OK)
 
     def mail(self, line):
+
+        line = self.check_space(line)
 
         # get sender's email address:
         # MAIL FROM: <address>
@@ -271,6 +278,8 @@ class MailServer:
             self.send_status_code(StatusCode.INVALID_PARAMETER)
             
     def rcpt(self, line):
+
+        line = self.check_space(line)
 
         if( not self.sender ):
             self.send_status_code(StatusCode.BAD_SEQUENCE)
