@@ -58,7 +58,7 @@ class MailServer:
 
         # SOL_SOCKET means the configuration we are setting are
         # protocol independent.
-        skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR | socket.SO_REUSEPORT, 1 )
+        skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1 )
 
         # bind the socket to a port, so it can listen for connections
         # going for it
