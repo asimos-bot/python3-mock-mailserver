@@ -7,7 +7,7 @@ RFC: https://tools.ietf.org/html/rfc821
 ## How to run
 
 ```
-python3 mail_server.py
+python3 mail_server.py <file with email addresses>
 ```
 
 ## Collaborators
